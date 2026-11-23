@@ -17,6 +17,7 @@ const curatedSrc = await fs.readFile(path.join(ROOT, 'js', 'vocab-data.js'), 'ut
 const CURATED = JSON.parse(curatedSrc.slice(curatedSrc.indexOf('{'), curatedSrc.lastIndexOf('}') + 1));
 let cache = {};
 try { cache = JSON.parse(await fs.readFile(CACHE_F, 'utf8')); } catch {}
+if (cache.v !== 2) { cache = { v: 2, t: cache.t || {} }; }
 cache.w ||= {}; cache.t ||= {};
 
 // ---------------- network helpers ----------------
@@ -58,6 +59,7 @@ async function lookupWord(w) {
     res.bn = (g[0] || []).map((x) => x[0]).join('').trim();
     (g[1] || []).forEach((b) => { if (b && b[0] && Array.isArray(b[1])) res.bnAlt[b[0]] = b[1].slice(0, 4); });
   } else { gtxBlocked = true; res.bn = await translate(w, true); }
+  res.bn = (res.bn || '').replace(/\s*\([^)]*\)\s*:?/g, '').replace(/[:;।]+$/, '').trim();
   if (res.bn && res.bn.toLowerCase() === w) res.bn = '';
   const forms = [w, w.replace(/ies$/, 'y'), w.replace(/es$/, ''), w.replace(/s$/, ''), w.replace(/ed$/, ''), w.replace(/ed$/, 'e'), w.replace(/ing$/, ''), w.replace(/ing$/, 'e')];
   for (const f of [...new Set(forms)]) {
@@ -65,10 +67,13 @@ async function lookupWord(w) {
     await sleep(120);
     if (!Array.isArray(d)) continue;
     const syn = new Set(), ant = new Set(), pos = [];
+    let mi = 0;
     for (const e of d) for (const m of e.meanings || []) {
       if (m.partOfSpeech && !pos.includes(m.partOfSpeech)) pos.push(m.partOfSpeech);
-      (m.synonyms || []).forEach((s) => syn.add(s)); (m.antonyms || []).forEach((s) => ant.add(s));
-      for (const df of m.definitions || []) { if (!res.def) res.def = df.definition; (df.synonyms || []).forEach((s) => syn.add(s)); (df.antonyms || []).forEach((s) => ant.add(s)); }
+      if (mi++ > 0) continue; // synonyms/antonyms only from the main (first) sense
+      const d0 = (m.definitions || [])[0];
+      if (d0) { res.def = d0.definition; (d0.synonyms || []).forEach((s) => syn.add(s)); (d0.antonyms || []).forEach((s) => ant.add(s)); }
+      (m.synonyms || []).slice(0, 4).forEach((s) => syn.add(s)); (m.antonyms || []).slice(0, 3).forEach((s) => ant.add(s));
     }
     res.pos = pos.join('/'); res.syn = [...syn].slice(0, 6); res.ant = [...ant].slice(0, 5);
     if (f !== w) res.base = f;
