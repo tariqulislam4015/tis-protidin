@@ -17,7 +17,7 @@ const curatedSrc = await fs.readFile(path.join(ROOT, 'js', 'vocab-data.js'), 'ut
 const CURATED = JSON.parse(curatedSrc.slice(curatedSrc.indexOf('{'), curatedSrc.lastIndexOf('}') + 1));
 let cache = {};
 try { cache = JSON.parse(await fs.readFile(CACHE_F, 'utf8')); } catch {}
-if (cache.v !== 3) { cache = { v: 3, t: cache.t || {} }; }
+if (cache.v !== 4) { cache = { v: 4, t: cache.t || {} }; }
 cache.w ||= {}; cache.t ||= {};
 
 // ---------------- network helpers ----------------
@@ -60,7 +60,7 @@ async function lookupWord(w) {
     (g[1] || []).forEach((b) => { if (b && b[0] && Array.isArray(b[1])) res.bnAlt[b[0]] = b[1].slice(0, 4); });
   } else { gtxBlocked = true; res.bn = await translate(w, true); }
   res.bn = (res.bn || '').replace(/\s*\([^)]*\)\s*:?/g, '').replace(/[:;।]+$/, '').trim();
-  if (res.bn && res.bn.toLowerCase() === w) res.bn = '';
+  if (res.bn && (res.bn.toLowerCase() === w || res.bn.length > 32 || res.bn.split(/\s+/).length > 4)) res.bn = '';
   const forms = [w, w.replace(/ies$/, 'y'), w.replace(/es$/, ''), w.replace(/s$/, ''), w.replace(/ed$/, ''), w.replace(/ed$/, 'e'), w.replace(/ing$/, ''), w.replace(/ing$/, 'e')];
   for (const f of [...new Set(forms)]) {
     const d = await getJSON(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(f)}`);
@@ -73,7 +73,7 @@ async function lookupWord(w) {
       if (mi++ > 0) continue; // synonyms/antonyms only from the main (first) sense
       const d0 = (m.definitions || [])[0];
       if (d0) { res.def = d0.definition; (d0.synonyms || []).forEach((s) => syn.add(s)); (d0.antonyms || []).forEach((s) => ant.add(s)); }
-      if (!syn.size) (m.synonyms || []).slice(0, 2).forEach((s) => syn.add(s)); if (!ant.size) (m.antonyms || []).slice(0, 2).forEach((s) => ant.add(s));
+
     }
     res.pos = pos.join('/'); res.syn = [...syn].slice(0, 6); res.ant = [...ant].slice(0, 5);
     if (f !== w) res.base = f;
