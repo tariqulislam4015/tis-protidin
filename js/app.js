@@ -273,7 +273,7 @@ function viewHome() {
   const side = pool.filter((x) => x !== lead).slice(0, 5);
   const counts = Object.keys(CATS).map((k) => [k, byCat(k).length]);
   const sections = Object.keys(CATS).map((k) => {
-    const list = byCat(k).slice(0, k === 'video' ? 6 : 6);
+    const list = (k === 'video' ? [...byCat(k).filter(isJamuna), ...byCat(k).filter((x) => !isJamuna(x))] : byCat(k)).slice(0, 6);
     if (!list.length) return '';
     return `<div class="h-sec" style="--cc:${CATS[k].col}"><h2>${CATS[k].e} ${CATS[k].bn}</h2><a href="#/c/${k}?d=${S.date}">সব দেখুন (${bn(byCat(k).length)}) →</a></div>
       <div class="grid">${list.map(card).join('')}</div>`;
@@ -305,16 +305,32 @@ function viewHome() {
   </div>`;
 }
 
+const isJamuna = (x) => x.c === 'video' && (x.f || x.s === 'yt-jamunatvbd');
+const ytEmbed = (v) => `<div class="yt-frame"><iframe src="https://www.youtube-nocookie.com/embed/${esc(v)}" allowfullscreen loading="lazy" title="YouTube"></iframe></div>`;
+function jamunaBlock() {
+  const list = S.items.filter(isJamuna).sort((a, b) => (b.x || 0) - (a.x || 0) || b.p.localeCompare(a.p));
+  const pins = S.pinned?.videos || [];
+  const lead = list[0];
+  return `<section class="jamuna">
+    <div class="jm-head"><span class="jm-logo">📺</span><div><h2>Jamuna TV — আজকের ভিডিও</h2><small>প্রতি ৩ ঘণ্টায় স্বয়ংক্রিয়ভাবে নতুন ভিডিও যোগ হয়</small></div>
+      <a class="btn sm jm-btn" href="https://www.youtube.com/@JamunaTVbd" target="_blank" rel="noopener">▶ চ্যানেল দেখুন</a></div>
+    ${lead ? `<div class="jm-main">${ytEmbed(lead.v)}<div class="jm-cap">${lead.x ? '<span class="badge" style="--cc:#e11d48">⭐ Jamuna Index</span> ' : ''}<a href="${esc(lead.u)}" target="_blank" rel="noopener"><b>${esc(lead.t)}</b> ↗</a><small>${fmtTime(lead.p)}</small></div></div>`
+      : `<p class="muted">এই তারিখে Jamuna TV-এর ভিডিও এখনো আসেনি।</p>`}
+    ${list.length > 1 ? `<div class="jm-list">${list.slice(1, 16).map((x) => `<a class="jm-item" href="${esc(x.u)}" target="_blank" rel="noopener"><img src="${esc(x.img)}" alt="" loading="lazy"><span>${x.x ? '⭐ ' : ''}${esc(x.t)}<small>${fmtTime(x.p)}</small></span></a>`).join('')}</div>` : ''}
+    ${pins.length ? `<div class="jm-pins"><h3>📌 পিন করা ভিডিও</h3>${pins.map((p) => `<div class="jm-pin">${ytEmbed(p.v)}<a href="${esc(p.u)}" target="_blank" rel="noopener"><b>${esc(p.t)}</b> ↗</a><small>${esc(p.sn)} • ${esc(p.u)}</small></div>`).join('')}</div>` : ''}
+  </section>`;
+}
 function viewCat(cat, params) {
   const C = CATS[cat]; if (!C) return viewHome();
   let list = byCat(cat);
+  if (cat === 'video') list = [...list.filter(isJamuna), ...list.filter((x) => !isJamuna(x))];
   const sources = [...new Set(list.map((x) => x.sn))];
   const src = params.get('s');
   if (src) list = list.filter((x) => x.sn === src);
   const page = +(params.get('p') || 1), per = 24;
   const head = `<h1 class="page-title">${C.e} ${C.bn}</h1><p class="page-sub">${fmtDate(S.date)} • ${bn(byCat(cat).length)}টি খবর</p>`;
-  if (!byCat(cat).length) return `<div class="view">${head}${emptyView(`এই তারিখে ${C.bn} বিভাগে কোনো খবর নেই`)}</div>`;
-  return `<div class="view" style="--cc:${C.col}">${head}
+  if (!byCat(cat).length) return `<div class="view">${head}${cat === 'video' ? jamunaBlock() : ''}${emptyView(`এই তারিখে ${C.bn} বিভাগে কোনো খবর নেই`)}</div>`;
+  return `<div class="view" style="--cc:${C.col}">${head}${cat === 'video' ? jamunaBlock() : ''}
     <div class="chips"><a class="chip ${!src ? 'on' : ''}" href="#/c/${cat}?d=${S.date}">সব উৎস</a>${sources.map((s) => `<a class="chip ${s === src ? 'on' : ''}" href="#/c/${cat}?d=${S.date}&s=${encodeURIComponent(s)}">${esc(s)}</a>`).join('')}</div>
     <div class="grid">${list.slice(0, page * per).map(card).join('')}</div>
     ${list.length > page * per ? `<div style="text-align:center;margin-top:20px"><a class="btn ghost" href="#/c/${cat}?d=${S.date}${src ? '&s=' + encodeURIComponent(src) : ''}&p=${page + 1}">আরও দেখুন ↓</a></div>` : ''}
@@ -746,9 +762,12 @@ window.TIS = { setDate, live: liveFetch };
   app.innerHTML = `<div class="grid">${'<div class="skel"></div>'.repeat(6)}</div>`;
   loadbar(15);
   await loadIndex();
+  S.pinned = await getJSON('data/pinned.json');
   const want = new URLSearchParams(location.hash.split('?')[1] || '').get('d');
   const ds = S.index.dates.map((x) => x.date);
-  await loadDate(want || ds[0] || todayDhaka());
+  const td = todayDhaka();
+  const best = S.index.dates.find((x) => x.date <= td && x.count >= 15) || S.index.dates.find((x) => x.date <= td) || S.index.dates[0];
+  await loadDate(want || best?.date || td);
   route();
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 })();

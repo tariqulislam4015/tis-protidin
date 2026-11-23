@@ -91,7 +91,7 @@ const minTime = now.getTime() - MAX_AGE_DAYS * 864e5;
 function push(raw, feed, extra = {}) {
   let t = new Date(raw.when);
   if (isNaN(t)) t = now;
-  if (t.getTime() > now.getTime() + 3600e3) t = now;
+  if (t.getTime() > now.getTime()) t = now; // never date items in the future
   if (t.getTime() < minTime) return;
   let title = raw.title, sn = feed.name;
   if (feed.aggregator || extra.gn) { // Google News: "Headline - Source"
@@ -105,6 +105,7 @@ function push(raw, feed, extra = {}) {
     id: sha(title.toLowerCase()), t: title, d: desc, u: raw.link, s: feed.id, sn,
     c: extra.cat || categorise(feed.cat, title + ' ' + desc), p: t.toISOString(),
     img: raw.img && /^https?:/.test(raw.img) ? raw.img : undefined, l: feed.lang, v: raw.vid || undefined,
+    f: extra.feat ? 1 : undefined, x: extra.hl ? 1 : undefined,
   });
 }
 const gnUrl = (site, lang) => `https://news.google.com/rss/search?q=site:${encodeURIComponent(site)}+when:1d&hl=${lang === 'bn' ? 'bn' : 'en-BD'}&gl=BD&ceid=BD:${lang === 'bn' ? 'bn' : 'en'}`;
@@ -125,10 +126,23 @@ await Promise.all(SRC.youtube.map(async (y) => {
   const id = (page.match(/"(?:channelId|externalId)":"(UC[\w-]{22})"/) || page.match(/channel\/(UC[\w-]{22})/) || [])[1];
   if (!id) { stats['yt:' + y.handle] = 'no id'; return; }
   const got = parseFeed(await get(`https://www.youtube.com/feeds/videos.xml?channel_id=${id}`));
-  got.slice(0, 8).forEach((r) => push({ ...r, img: r.vid ? `https://i.ytimg.com/vi/${r.vid}/hqdefault.jpg` : r.img, desc: r.desc.slice(0, 300) }, { id: 'yt-' + y.handle, name: y.name, lang: 'bn', cat: 'video' }, { cat: 'video' }));
+  const hl = y.highlight ? new RegExp(y.highlight, 'i') : null;
+  got.slice(0, y.max || 8).forEach((r) => push({ ...r, img: r.vid ? `https://i.ytimg.com/vi/${r.vid}/hqdefault.jpg` : r.img, desc: r.desc.slice(0, 300) }, { id: 'yt-' + y.handle.toLowerCase(), name: y.name, lang: 'bn', cat: 'video' }, { cat: 'video', feat: y.featured, hl: hl && hl.test(r.title) }));
   stats['yt:' + y.handle] = got.length;
 }));
 console.table(stats);
+
+// pinned videos (always shown at the top of the Video section) — title via YouTube oEmbed
+const pinned = [];
+for (const v of SRC.pinVideos || []) {
+  try {
+    const r = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${v}&format=json`, { headers: { 'User-Agent': UA } });
+    const j = r.ok ? await r.json() : {};
+    pinned.push({ v, t: j.title || 'Jamuna TV', sn: j.author_name || 'Jamuna TV', u: `https://www.youtube.com/watch?v=${v}`, img: `https://i.ytimg.com/vi/${v}/hqdefault.jpg` });
+  } catch { pinned.push({ v, t: 'Jamuna TV', sn: 'Jamuna TV', u: `https://www.youtube.com/watch?v=${v}`, img: `https://i.ytimg.com/vi/${v}/hqdefault.jpg` }); }
+}
+await fs.mkdir(DATA, { recursive: true });
+await fs.writeFile(path.join(DATA, 'pinned.json'), JSON.stringify({ updated: now.toISOString(), channel: 'https://www.youtube.com/@JamunaTVbd', videos: pinned }));
 
 // ---------- merge into date files ----------
 await fs.mkdir(NEWS, { recursive: true });
