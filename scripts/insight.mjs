@@ -32,27 +32,33 @@ async function getJSON(url) {
     try { return JSON.parse(txt); } catch { if (logged++ < 6) console.log(`  ! non-JSON ${url.slice(0, 70)}: ${txt.slice(0, 120)}`); return null; }
   } catch (e) { if (logged++ < 6) console.log(`  ! ${e.name}: ${e.message} ${url.slice(0, 80)}`); return null; }
 }
-let netFails = 0;
-async function translate(text) {
+let netFails = 0, gtxBlocked = false, mmFails = 0;
+async function translate(text, short = false) {
   if (!text) return '';
   if (cache.t[text]) return cache.t[text];
-  if (netFails > 8) return '';
-  const j = await getJSON(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=bn&dt=t&q=${encodeURIComponent(text)}`);
-  if (!j) { netFails++; return ''; }
-  const out = (j[0] || []).map((x) => x[0]).join('').trim();
+  let out = '';
+  if (!gtxBlocked) {
+    const j = await getJSON(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=bn&dt=t&q=${encodeURIComponent(text)}`);
+    if (j) out = (j[0] || []).map((x) => x[0]).join('').trim(); else gtxBlocked = true;
+  }
+  if (!out && mmFails < 4) { // MyMemory free API
+    const j = await getJSON(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.slice(0, 480))}&langpair=en|bn`);
+    const t = j?.responseData?.translatedText;
+    if (t && j.responseStatus == 200 && !/MYMEMORY WARNING|QUERY LENGTH/i.test(t)) out = t.trim(); else mmFails++;
+    await sleep(250);
+  }
   if (out) cache.t[text] = out;
-  await sleep(120);
   return out;
 }
 async function lookupWord(w) {
-  if (cache.w[w]) return cache.w[w];
-  if (netFails > 8) return null;
+  if (cache.w[w]?.bn) return cache.w[w];
   const res = { pos: '', bn: '', bnAlt: {}, def: '', syn: [], ant: [] };
-  const g = await getJSON(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=bn&dt=t&dt=bd&q=${encodeURIComponent(w)}`);
+  const g = gtxBlocked ? null : await getJSON(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=bn&dt=t&dt=bd&q=${encodeURIComponent(w)}`);
   if (g) {
     res.bn = (g[0] || []).map((x) => x[0]).join('').trim();
     (g[1] || []).forEach((b) => { if (b && b[0] && Array.isArray(b[1])) res.bnAlt[b[0]] = b[1].slice(0, 4); });
-  } else netFails++;
+  } else { gtxBlocked = true; res.bn = await translate(w, true); }
+  if (res.bn && res.bn.toLowerCase() === w) res.bn = '';
   const forms = [w, w.replace(/ies$/, 'y'), w.replace(/es$/, ''), w.replace(/s$/, ''), w.replace(/ed$/, ''), w.replace(/ed$/, 'e'), w.replace(/ing$/, ''), w.replace(/ing$/, 'e')];
   for (const f of [...new Set(forms)]) {
     const d = await getJSON(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(f)}`);
@@ -70,6 +76,7 @@ async function lookupWord(w) {
   }
   if (!res.pos && Object.keys(res.bnAlt).length) res.pos = Object.keys(res.bnAlt).join('/');
   if (res.bn || res.def) cache.w[w] = res;
+  if (!res.def && !res.bn) netFails++;
   return res.bn || res.def ? res : null;
 }
 
@@ -185,12 +192,12 @@ for (const f of files) {
   const online = netBudgetDates-- > 0;
   const cand = wordsOf(items).filter((w) => !CURATED[w]).slice(0, online ? 80 : 0);
   if (online) {
-    for (const w of cand) { const r = await lookupWord(w); if (r) words[w] = r; }
-    for (const s of sentences) s.bn = await translate(s.en);
     for (const t of top7) {
       const it = items.find((x) => x.id === t.id);
       if (it && isEn(it.t)) { t.tbn = await translate(it.t); if (it.d) t.dbn = await translate(it.d); }
     }
+    for (const s of sentences) s.bn = await translate(s.en);
+    for (const w of cand) { if (netFails > 12) break; const r = await lookupWord(w); if (r) words[w] = r; }
   } else for (const w of cand) if (cache.w[w]) words[w] = cache.w[w];
   const curatedHere = wordsOf(items).filter((w) => CURATED[w]);
   await fs.writeFile(outF, JSON.stringify({ date, updated: new Date().toISOString(), top7, sentences, words, curated: curatedHere }));
@@ -200,4 +207,4 @@ for (const f of files) {
 const wk = Object.keys(cache.w); if (wk.length > 6000) wk.slice(0, wk.length - 6000).forEach((k) => delete cache.w[k]);
 const tk = Object.keys(cache.t); if (tk.length > 3000) tk.slice(0, tk.length - 3000).forEach((k) => delete cache.t[k]);
 await fs.writeFile(CACHE_F, JSON.stringify(cache));
-if (netFails > 8) console.log('⚠ lookups were throttled/unreachable this run; will retry next run.');
+if (netFails > 12 || mmFails >= 4) console.log('⚠ lookups were throttled/unreachable this run; will retry next run.');

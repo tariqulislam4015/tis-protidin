@@ -31,10 +31,10 @@
   ],
   "youtube": [
     { "handle": "tis.academy24", "name": "TIS Academy" },
-    { "handle": "bbcnewsbangla", "name": "BBC News Bangla" },
+    { "handle": "bbcbangla", "name": "BBC News Bangla" },
     { "handle": "somoynews360", "name": "Somoy TV" },
-    { "handle": "JamunaTelevision", "name": "Jamuna TV" },
+    { "handle": "jamunatvbd", "name": "Jamuna TV" },
     { "handle": "ProthomAlo", "name": "Prothom Alo" },
-    { "handle": "DailyStarBangladesh", "name": "The Daily Star" }
+    { "handle": "thedailystar", "name": "The Daily Star" }
   ]
 }
