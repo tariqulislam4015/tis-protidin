@@ -21,13 +21,16 @@ cache.w ||= {}; cache.t ||= {};
 
 // ---------------- network helpers ----------------
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+let logged = 0;
 async function getJSON(url) {
   try {
     const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 15000);
     const r = await fetch(url, { headers: { 'User-Agent': UA }, signal: ctl.signal });
     clearTimeout(t);
-    return r.ok ? await r.json() : null;
-  } catch { return null; }
+    if (!r.ok) { if (logged++ < 6) console.log(`  ! HTTP ${r.status} ${url.slice(0, 90)}`); return null; }
+    const txt = await r.text();
+    try { return JSON.parse(txt); } catch { if (logged++ < 6) console.log(`  ! non-JSON ${url.slice(0, 70)}: ${txt.slice(0, 120)}`); return null; }
+  } catch (e) { if (logged++ < 6) console.log(`  ! ${e.name}: ${e.message} ${url.slice(0, 80)}`); return null; }
 }
 let netFails = 0;
 async function translate(text) {
