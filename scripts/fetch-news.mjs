@@ -129,6 +129,22 @@ await Promise.all(SRC.youtube.map(async (y) => {
   const hl = y.highlight ? new RegExp(y.highlight, 'i') : null;
   got.slice(0, y.max || 8).forEach((r) => push({ ...r, img: r.vid ? `https://i.ytimg.com/vi/${r.vid}/hqdefault.jpg` : r.img, desc: r.desc.slice(0, 300) }, { id: 'yt-' + y.handle.toLowerCase(), name: y.name, lang: 'bn', cat: 'video' }, { cat: 'video', feat: y.featured, hl: hl && hl.test(r.title) }));
   stats['yt:' + y.handle] = got.length;
+  // daily program search (e.g. Jamuna i-Desk) — the channel feed holds only the latest 15 videos
+  if (y.search) {
+    const html = await get(`https://www.youtube.com/@${y.handle}/search?query=${encodeURIComponent(y.search)}`, 1);
+    const seen = new Set(); let n = 0;
+    for (const m of html.matchAll(/"videoRenderer":\{"videoId":"([\w-]{11})"[\s\S]{0,1500}?"title":\{"runs":\[\{"text":"((?:[^"\\]|\\.)*)"/g)) {
+      const [, vid, rawT] = m; if (seen.has(vid)) continue; seen.add(vid);
+      const title = JSON.parse(`"${rawT}"`);
+      if (hl && !hl.test(title)) continue;
+      const dm = title.match(/(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})/i);
+      const when = dm ? new Date(`${dm[1]} ${dm[2]} ${dm[3]} 12:00 GMT+0600`).toUTCString() : '';
+      if (!when) continue;
+      push({ title, link: `https://www.youtube.com/watch?v=${vid}`, desc: '', when, img: `https://i.ytimg.com/vi/${vid}/hqdefault.jpg`, vid }, { id: 'yt-' + y.handle.toLowerCase(), name: y.name, lang: 'bn', cat: 'video' }, { cat: 'video', feat: y.featured, hl: true });
+      n++;
+    }
+    stats['yt-search:' + y.search] = n;
+  }
 }));
 console.table(stats);
 

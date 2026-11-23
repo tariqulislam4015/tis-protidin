@@ -314,7 +314,7 @@ function jamunaBlock() {
   return `<section class="jamuna">
     <div class="jm-head"><span class="jm-logo">📺</span><div><h2>Jamuna TV — আজকের ভিডিও</h2><small>প্রতি ৩ ঘণ্টায় স্বয়ংক্রিয়ভাবে নতুন ভিডিও যোগ হয়</small></div>
       <a class="btn sm jm-btn" href="https://www.youtube.com/@JamunaTVbd" target="_blank" rel="noopener">▶ চ্যানেল দেখুন</a></div>
-    ${lead ? `<div class="jm-main">${ytEmbed(lead.v)}<div class="jm-cap">${lead.x ? '<span class="badge" style="--cc:#e11d48">⭐ Jamuna Index</span> ' : ''}<a href="${esc(lead.u)}" target="_blank" rel="noopener"><b>${esc(lead.t)}</b> ↗</a><small>${fmtTime(lead.p)}</small></div></div>`
+    ${lead ? `<div class="jm-main">${ytEmbed(lead.v)}<div class="jm-cap">${lead.x ? '<span class="badge" style="--cc:#e11d48">⭐ Jamuna i-Desk — একনজরে বিশ্বের আলোচিত খবর</span> ' : ''}<a href="${esc(lead.u)}" target="_blank" rel="noopener"><b>${esc(lead.t)}</b> ↗</a><small>${fmtTime(lead.p)}</small></div></div>`
       : `<p class="muted">এই তারিখে Jamuna TV-এর ভিডিও এখনো আসেনি।</p>`}
     ${list.length > 1 ? `<div class="jm-list">${list.slice(1, 16).map((x) => `<a class="jm-item" href="${esc(x.u)}" target="_blank" rel="noopener"><img src="${esc(x.img)}" alt="" loading="lazy"><span>${x.x ? '⭐ ' : ''}${esc(x.t)}<small>${fmtTime(x.p)}</small></span></a>`).join('')}</div>` : ''}
     ${pins.length ? `<div class="jm-pins"><h3>📌 পিন করা ভিডিও</h3>${pins.map((p) => `<div class="jm-pin">${ytEmbed(p.v)}<a href="${esc(p.u)}" target="_blank" rel="noopener"><b>${esc(p.t)}</b> ↗</a><small>${esc(p.sn)} • ${esc(p.u)}</small></div>`).join('')}</div>` : ''}
