@@ -26,7 +26,9 @@ jobs:
       - name: Collect news from all sources
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}   # ঐচ্ছিক: থাকলে AI সারাংশ ও MCQ তৈরি হবে
-        run: node scripts/fetch-news.mjs
+        run: |
+          node scripts/fetch-news.mjs
+          node scripts/insight.mjs || echo "insight step failed (non-fatal)"
 
       - name: Save data to repository
         run: |

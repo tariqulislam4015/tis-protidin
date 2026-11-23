@@ -41,7 +41,7 @@ function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.ad
 const loadbar = (p) => { const b = $('#loadbar'); b.style.width = p + '%'; if (p >= 100) setTimeout(() => (b.style.width = 0), 400); };
 
 // ---------- data ----------
-const S = { index: null, date: null, items: [], ai: null, live: false };
+const S = { index: null, date: null, items: [], ai: null, ins: null, live: false };
 async function getJSON(rel) {
   const bust = `?t=${Math.floor(Date.now() / 6e5)}`;
   for (const base of ['', PAGES]) {
@@ -58,9 +58,10 @@ async function loadDate(d) {
   loadbar(30);
   S.date = d; S.live = false;
   const meta = S.index.dates.find((x) => x.date === d);
-  const [news, ai] = await Promise.all([meta ? getJSON(`data/news/${d}.json`) : null, meta?.ai ? getJSON(`data/ai/${d}.json`) : null]);
+  const [news, ai, ins] = await Promise.all([meta ? getJSON(`data/news/${d}.json`) : null, meta?.ai ? getJSON(`data/ai/${d}.json`) : null, meta ? getJSON(`data/insight/${d}.json`) : null]);
   S.items = news?.items || [];
-  S.ai = ai;
+  S.ai = ai; S.ins = ins;
+  window.TISG?.setDay(ins?.words);
   loadbar(100);
   updateDateUI();
 }
@@ -101,7 +102,7 @@ async function liveFetch() {
   }));
   loadbar(100);
   if (!out.length) { toast('লাইভ খবর আনা যায়নি। একটু পরে চেষ্টা করুন।'); return; }
-  S.items = out.sort((a, b) => b.p.localeCompare(a.p)); S.live = true; S.date = todayDhaka(); S.ai = null;
+  S.items = out.sort((a, b) => b.p.localeCompare(a.p)); S.live = true; S.date = todayDhaka(); S.ai = null; S.ins = null;
   updateDateUI(); route();
 }
 
@@ -141,9 +142,9 @@ function card(it, i = 0) {
   return `<article class="card" style="--cc:${c.col};--i:${i % 12}">
     ${img}
     <div class="card-body">
-      <div class="meta"><span class="badge">${c.e} ${c.bn}</span><span>${esc(it.sn)}</span>${it.p ? `<span>• ${fmtTime(it.p)}</span>` : ''}</div>
-      <h3 data-open="${it.id}">${esc(it.t)}</h3>
-      ${it.d ? `<p>${esc(it.d)}</p>` : ''}
+      <div class="meta">${star(it.id) >= 0 ? `<span class="badge star7">⭐ ৭-তারকা #${bn(star(it.id) + 1)}</span>` : ''}<span class="badge">${c.e} ${c.bn}</span><span>${esc(it.sn)}</span>${it.p ? `<span>• ${fmtTime(it.p)}</span>` : ''}</div>
+      <h3 data-open="${it.id}">${V(it.t)}</h3>
+      ${it.d ? `<p>${V(it.d)}</p>` : ''}
       <div class="card-foot">
         <button data-open="${it.id}">📖 বিস্তারিত</button>
         <button data-save="${it.id}" class="${isSaved ? 'saved' : ''}">${isSaved ? '★ সংরক্ষিত' : '☆ সংরক্ষণ'}</button>
@@ -152,6 +153,8 @@ function card(it, i = 0) {
     </div>
   </article>`;
 }
+const V = (t) => (window.TISG ? window.TISG.vocabify(t) : esc(t));
+const star = (id) => S.ins?.top7?.findIndex((x) => x.id === id) ?? -1;
 const findItem = (id) => S.items.find((x) => x.id === id) || saved()[id];
 document.addEventListener('click', (e) => {
   const o = e.target.closest('[data-open]'); if (o) { e.preventDefault(); openItem(o.dataset.open); return; }
@@ -192,6 +195,23 @@ const CLOSING = {
 };
 const aiPoint = (id) => S.ai?.points?.find((p) => p.id === id);
 
+const dayOf = (it) => (it.p ? fmtDate(new Date(Date.parse(it.p) + 6 * 3600e3).toISOString().slice(0, 10), { day: 'numeric', month: 'long', year: 'numeric' }) : '');
+const insOf = (id) => S.ins?.top7?.find((x) => x.id === id) || {};
+function ansBlock(it, lang = 'bn', open = true) {
+  if (!window.TISX) return '';
+  return `<div class="ansbox" data-ans="${it.id}">
+    <div class="ans-top"><h4>💯 ফুল মার্কস লিখিত উত্তর</h4>
+      <span class="seg-tog"><button data-anslang="bn" class="${lang === 'bn' ? 'on' : ''}">বাংলা</button><button data-anslang="en" class="${lang === 'en' ? 'on' : ''}">English</button></span></div>
+    <div class="ans-body">${open ? window.TISX.answer(it, insOf(it.id), facts(it), dayOf(it), lang) : ''}</div>
+    <p class="muted ans-note">ⓘ তথ্য অংশ আজকের খবর থেকে; পটভূমি, প্রভাব ও সুপারিশ বিষয়ভিত্তিক মডেল কাঠামো — নিজের ভাষায় সাজিয়ে লিখুন।</p>
+  </div>`;
+}
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-anslang]'); if (!b) return;
+  const box = b.closest('[data-ans]'), it = findItem(box.dataset.ans); if (!it) return;
+  box.querySelectorAll('[data-anslang]').forEach((x) => x.classList.toggle('on', x === b));
+  box.querySelector('.ans-body').innerHTML = window.TISX.answer(it, insOf(it.id), facts(it), dayOf(it), b.dataset.anslang);
+});
 function openItem(id) {
   const it = findItem(id); if (!it) return;
   const c = CATS[it.c] || CATS.national, f = facts(it), ap = aiPoint(id);
@@ -201,9 +221,9 @@ function openItem(id) {
   const yt = it.v ? `<div style="position:relative;padding-top:56.25%;border-radius:14px;overflow:hidden;margin:12px 0"><iframe src="https://www.youtube-nocookie.com/embed/${esc(it.v)}" style="position:absolute;inset:0;width:100%;height:100%;border:0" allowfullscreen loading="lazy"></iframe></div>` : (it.img ? `<img class="modal-img" src="${esc(it.img)}" alt="" onerror="this.remove()">` : '');
   $('#modalBody').innerHTML = `
     <div class="meta" style="--cc:${c.col}"><span class="badge">${c.e} ${c.bn}</span><span>${esc(it.sn)}</span><span>• ${day} ${it.p ? fmtTime(it.p) : ''}</span></div>
-    <h2>${esc(it.t)}</h2>
+    <h2>${V(it.t)}</h2>${insOf(id).tbn ? `<p class="tr-bn">🇧🇩 ${esc(insOf(id).tbn)}</p>` : ''}${star(id) >= 0 ? `<div class="star-why">⭐ ৭-তারকা #${bn(star(id) + 1)} — ${insOf(id).why.join(' • ')}</div>` : ''}
     ${yt}
-    ${it.d ? `<p style="font-size:17px">${esc(it.d)}</p>` : ''}
+    ${it.d ? `<p style="font-size:17px">${V(it.d)}</p>${insOf(id).dbn ? `<p class="tr-bn">🇧🇩 ${esc(insOf(id).dbn)}</p>` : ''}` : ''}
     ${ap ? `<div class="box"><h4>🤖 সংক্ষেপে</h4><p style="margin:0">${esc(ap.bn)}</p></div>` : ''}
     <div class="box exam"><h4>🎯 পরীক্ষার জন্য মূল পয়েন্ট</h4><ul>
       <li><b>বিষয়:</b> ${esc(it.t)}</li>
@@ -216,6 +236,7 @@ function openItem(id) {
     ${f.gl.length ? `<div class="box"><h4>📚 সংশ্লিষ্ট টার্ম (লিখিত পরীক্ষায় কাজে লাগবে)</h4><ul>${f.gl.map(([k, v]) => `<li><b>${k}:</b> ${v}</li>`).join('')}</ul></div>` : ''}
     <div class="box write"><h4>🏦 লিখিত উত্তরের খসড়া <small class="muted">(নিজের ভাষায় সাজিয়ে লিখুন)</small></h4>
       <p style="margin:0" id="draft">${esc(`${day} তারিখে ${it.sn}-এ প্রকাশিত প্রতিবেদন অনুযায়ী, ${it.t.replace(/[।.!?]$/, '')}। ${ap?.bn || it.d || ''} ${CLOSING[it.c] || ''}`)}</p></div>
+    ${it.c !== 'video' ? ansBlock(it) : ''}
     ${related.length ? `<div class="box"><h4>🔗 সম্পর্কিত খবর</h4><ul>${related.map((r) => `<li><a href="#" data-open="${r.id}">${esc(r.t)}</a> <small class="muted">— ${esc(r.sn)}</small></li>`).join('')}</ul></div>` : ''}
     <div class="row-btns">
       <a class="btn" href="${esc(it.u)}" target="_blank" rel="noopener">↗ পুরো খবর পড়ুন</a>
@@ -259,6 +280,8 @@ function viewHome() {
   }).join('');
   return `<div class="view">
     ${S.live ? '<div class="box" style="margin-top:0">⚡ লাইভ মোড: সরাসরি RSS থেকে আনা খবর দেখানো হচ্ছে।</div>' : ''}
+    ${top7().length ? `<section class="s7-banner"><div class="s7-bh"><span class="s7-stars">${STARS}</span><h2>আজ অবশ্যই পড়ুন</h2><a href="#/star?d=${S.date}">সব ৭টি ও মডেল উত্তর →</a></div>
+      <ol>${top7().map(({ x, it }) => `<li><a href="#" data-open="${it.id}">${esc(x.tbn || it.t)}</a> <small>${x.why.slice(0, 2).map(esc).join(' • ')}</small></li>`).join('')}</ol></section>` : ''}
     <section class="hero">
       <div class="hero-main" data-open="${lead.id}">
         ${lead.img ? `<div class="hero-img" style="background-image:url('${esc(lead.img)}')"></div>` : ''}
@@ -321,7 +344,8 @@ function viewWritten() {
     const list = byCat(k).slice(0, per[k]); if (!list.length) return '';
     return `<h3 style="margin:18px 0 6px;color:${CATS[k].col}">${CATS[k].e} ${CATS[k].bn}</h3><ol start="${n + 1}">${list.map((it) => {
       n++; const f = facts(it), ap = aiPoint(it.id);
-      return `<li><b>${esc(it.t)}</b>${ap ? ` — ${esc(ap.exam || ap.bn)}` : ''}${f.nums.length ? ` <span class="muted">[তথ্য: ${f.nums.slice(0, 3).map(esc).join(', ')}]</span>` : ''} <span class="src">(${esc(it.sn)})</span></li>`;
+      const tb = insOf(it.id).tbn;
+      return `<li><a class="nb-link" href="${esc(it.u)}" target="_blank" rel="noopener"><b>${V(it.t)}</b> ↗</a>${tb ? ` <span class="nb-bn">(${esc(tb)})</span>` : ''}${ap ? ` — ${esc(ap.exam || ap.bn)}` : ''}${f.nums.length ? ` <span class="muted">[তথ্য: ${f.nums.slice(0, 3).map(esc).join(', ')}]</span>` : ''} <span class="src">(${esc(it.sn)})</span> <button class="nb-more" data-open="${it.id}" title="বিস্তারিত ও মডেল উত্তর">📖</button></li>`;
     }).join('')}</ol>`;
   }).join('');
   return `<div class="view">
@@ -329,6 +353,11 @@ function viewWritten() {
     <p class="page-sub">${fmtDate(S.date)} — খাতায় লেখার মতো করে সাজানো। যেকোনো লাইনে ক্লিক করে বিস্তারিত দেখতে মূল বিভাগে যান।</p>
     <div class="row-btns no-print" style="margin:0 0 14px"><button class="btn" onclick="print()">🖨️ PDF/প্রিন্ট</button><button class="btn ghost" id="copyNotes">📋 সব কপি</button><a class="btn gold" href="#/quiz?d=${S.date}">🧠 এই বিষয়ে পরীক্ষা দিন</a></div>
     ${S.ai?.summary ? `<div class="ai-box"><h3 style="margin-top:0">🤖 আজকের সারকথা</h3><p style="margin:0">${esc(S.ai.summary)}</p></div>` : ''}
+    ${top7().length ? `<div class="h-sec" style="--cc:#f59e0b"><h2>⭐ ৭-তারকা বিষয়: ফুল মার্কস মডেল উত্তর</h2><a href="#/star?d=${S.date}">সব দেখুন →</a></div>
+      ${top7().map(({ it }, i) => `<details class="panel model" ${i === 0 ? 'open' : ''}><summary><b>${bn(i + 1)}.</b> ${esc(insOf(it.id).tbn || it.t)} <a href="${esc(it.u)}" target="_blank" rel="noopener" class="muted">↗ মূল খবর</a></summary>${ansBlock(it)}</details>`).join('')}
+      ${window.TISX ? window.TISX.TIPS : ''}` : ''}
+    <div class="h-sec"><h2>📒 আজকের সব গুরুত্বপূর্ণ পয়েন্ট (খাতায় লেখার মতো)</h2></div>
+    <p class="muted" style="margin-top:-6px">প্রতিটি শিরোনামে ক্লিক করলে সরাসরি মূল খবরের পাতায় যাবে; 📖 চাপলে বিস্তারিত ও মডেল উত্তর।</p>
     <div class="notebook" id="notes">${blocks}</div>
     <div class="h-sec" style="--cc:var(--c-business)"><h2>📚 ব্যাংকিং ও অর্থনীতির গুরুত্বপূর্ণ টার্ম</h2></div>
     <div class="gloss">${window.TIS_GLOSSARY.map(([k, v]) => `<div><b>${k}</b><span>${v}</span></div>`).join('')}</div>
@@ -389,6 +418,104 @@ function viewAbout() {
     </div>
     <div class="row-btns"><a class="btn" href="${APK_URL}">⬇️ Android APK ডাউনলোড</a><a class="btn ghost" href="https://github.com/${OWNER}/${REPO}" target="_blank" rel="noopener">GitHub সোর্স কোড</a></div>
   </div>`;
+}
+
+
+// ---------- ⭐ 7-star must-read ----------
+const top7 = () => (S.ins?.top7 || []).map((x) => ({ x, it: findItem(x.id) })).filter((o) => o.it);
+const STARS = '★★★★★★★';
+function viewStar() {
+  const list = top7();
+  const head = `<div class="s7-head"><div class="s7-stars">${STARS}</div><h1 class="page-title">৭-তারকা: আজ অবশ্যই পড়ুন</h1>
+    <p class="page-sub">${fmtDate(S.date)} — যেকোনো চাকরি/ভর্তি পরীক্ষার জন্য দিনের সবচেয়ে গুরুত্বপূর্ণ ৭টি বিষয়। পরীক্ষা-প্রাসঙ্গিকতা (COP, IMF, বাংলাদেশ ব্যাংক, জাতিসংঘ, নির্বাচন, চুক্তি…) ও কতগুলো সংবাদমাধ্যমে এসেছে তার ভিত্তিতে স্বয়ংক্রিয়ভাবে বাছাই।</p></div>`;
+  if (!list.length) return `<div class="view">${head}${emptyView(S.items.length ? '৭-তারকা তালিকা এখনো তৈরি হয়নি — পরবর্তী হালনাগাদে (৩ ঘণ্টার মধ্যে) আসবে' : undefined)}</div>`;
+  return `<div class="view">${head}
+    ${list.map(({ x, it }, i) => {
+      const f = facts(it), rel = (x.rel || []).map(findItem).filter(Boolean).slice(0, 4);
+      return `<article class="s7" style="--i:${i}">
+        <div class="s7-rank"><b>${bn(i + 1)}</b><span>${'★'.repeat(Math.max(1, 7 - i))}</span></div>
+        <div class="s7-body">
+          <div class="meta"><span class="badge" style="--cc:${CATS[it.c]?.col}">${CATS[it.c]?.e} ${CATS[it.c]?.bn}</span><span>${esc(it.sn)}</span><span>• ${dayOf(it)}</span></div>
+          <h2><a href="${esc(it.u)}" target="_blank" rel="noopener">${V(it.t)} <small>↗</small></a></h2>
+          ${x.tbn ? `<p class="tr-bn">🇧🇩 ${esc(x.tbn)}</p>` : ''}
+          ${it.d ? `<p>${V(it.d)}</p>` : ''}${x.dbn ? `<p class="tr-bn">🇧🇩 ${esc(x.dbn)}</p>` : ''}
+          <div class="chips" style="margin:8px 0">${x.why.map((w) => `<span class="chip on">🎯 ${esc(w)}</span>`).join('')}${x.cover > 1 ? `<span class="chip">📰 ${bn(x.cover)}টি সংবাদমাধ্যমে</span>` : ''}</div>
+          ${f.nums.length || f.names.length ? `<div class="box exam"><h4>🔢 মনে রাখুন</h4><ul>${f.nums.length ? `<li><b>সংখ্যা/তথ্য:</b> ${f.nums.map(esc).join(' • ')}</li>` : ''}${f.names.length ? `<li><b>নাম/প্রতিষ্ঠান:</b> ${f.names.map(esc).join(', ')}</li>` : ''}</ul></div>` : ''}
+          ${rel.length ? `<div class="box"><h4>🔗 একই বিষয়ে অন্য পত্রিকা</h4><ul>${rel.map((r) => `<li><a href="${esc(r.u)}" target="_blank" rel="noopener">${esc(r.t)} ↗</a> <small class="muted">— ${esc(r.sn)}</small></li>`).join('')}</ul></div>` : ''}
+          <details ${i === 0 ? 'open' : ''}><summary class="btn ghost sm">💯 ফুল মার্কস লিখিত উত্তর দেখুন</summary>${ansBlock(it)}</details>
+          <div class="row-btns"><a class="btn sm" href="${esc(it.u)}" target="_blank" rel="noopener">↗ মূল খবর পড়ুন</a><button class="btn ghost sm" data-open="${it.id}">📖 বিস্তারিত</button><button class="btn ghost sm" data-save="${it.id}">${saved()[it.id] ? '★ সংরক্ষিত' : '☆ সংরক্ষণ'}</button></div>
+        </div></article>`;
+    }).join('')}
+    ${window.TISX ? window.TISX.TIPS : ''}
+  </div>`;
+}
+
+// ---------- 📐 long sentence analysis ----------
+function localSentences() {
+  const out = [];
+  for (const it of S.items) {
+    if (out.length >= 10 || !it.d || !window.TISG?.isEnglish(it.d)) continue;
+    const p = it.d.split(/(?<=[.!?])\s+(?=[A-Z])/).find((x) => x.split(/\s+/).length >= 16 && /[.!?]$/.test(x));
+    if (p) out.push({ id: it.id, en: p });
+  }
+  return out;
+}
+function viewSentence() {
+  const list = S.ins?.sentences?.length ? S.ins.sentences : localSentences();
+  return `<div class="view">
+    <h1 class="page-title">📐 বড় বাক্যের গঠন বিশ্লেষণ</h1>
+    <p class="page-sub">${fmtDate(S.date)} — আজকের ইংরেজি পত্রিকা থেকে বাছাই করা বড় বাক্য। প্রতিটি বাক্যের অংশ (Subject ➜ Verb ➜ Object…), Parts of Speech, বাংলা অর্থ, Tense ও Voice। রঙিন শব্দে ক্লিক করলে Synonym/Antonym দেখাবে।</p>
+    <details class="legend-box"><summary>🎨 রঙের সংকেত (Parts of Speech)</summary><div class="legend">${window.TISG?.LEGEND() || ''}</div></details>
+    ${list.length ? list.map((s, i) => { const it = findItem(s.id); return `<section class="panel sent-wrap"><div class="meta"><b>বাক্য ${bn(i + 1)}</b>${it ? `<span>• ${esc(it.sn)}</span><a href="${esc(it.u)}" target="_blank" rel="noopener" style="color:var(--brand);font-weight:700">মূল খবর ↗</a>` : ''}</div>${window.TISG.renderSentence(s.en, s.bn)}</section>`; }).join('')
+      : '<div class="empty"><b>📐</b>এই তারিখে বিশ্লেষণযোগ্য বড় ইংরেজি বাক্য পাওয়া যায়নি।</div>'}
+    <p class="muted" style="font-size:13.5px">ⓘ বিশ্লেষণ স্বয়ংক্রিয় নিয়মভিত্তিক — জটিল বাক্যে কোথাও ভুল হতে পারে; শেখার সহায়িকা হিসেবে ব্যবহার করুন।</p>
+  </div>`;
+}
+
+// ---------- 📘 vocabulary ----------
+function dayWordList() {
+  const G = window.TISG; if (!G) return [];
+  let ws = [...(S.ins?.curated || []), ...Object.keys(S.ins?.words || {})];
+  if (!ws.length) { const txt = S.items.map((x) => `${x.t} ${x.d || ''}`).join(' ').toLowerCase(); ws = Object.keys(window.TIS_VOCAB || {}).filter((w) => new RegExp(`\\b${w}\\b`).test(txt)); }
+  return [...new Set(ws)].map((w) => G.dictEntry(w)).filter((d) => d && d.bn);
+}
+function exampleOf(w) { const re = new RegExp(`\\b${w}\\b`, 'i'); return S.items.find((x) => re.test(`${x.t} ${x.d || ''}`)); }
+function wordCard(d) {
+  const ex = exampleOf(d.w);
+  return `<div class="wcard"><div class="wcard-h"><span class="vw" data-w="${d.w}" data-ctx="${esc(ex ? (re => (ex.d && re.test(ex.d) ? ex.d : ex.t))(new RegExp(`\\b${d.w}\\b`, 'i')) : '')}">${esc(d.w)}</span><small>${esc(d.pos || '')}</small></div>
+    <p class="wbn">${esc(d.bn)}</p>
+    ${d.syn?.length ? `<p><b>Syn:</b> ${d.syn.slice(0, 4).map(esc).join(', ')}</p>` : ''}${d.ant?.length ? `<p><b>Ant:</b> ${d.ant.slice(0, 3).map(esc).join(', ')}</p>` : ''}
+    ${ex ? `<a class="wex" href="${esc(ex.u)}" target="_blank" rel="noopener">“${esc(ex.t.slice(0, 90))}${ex.t.length > 90 ? '…' : ''}” ↗</a>` : ''}</div>`;
+}
+function viewVocab() {
+  const list = dayWordList(), mine = Object.entries(store.get('tis_words', {}));
+  return `<div class="view">
+    <h1 class="page-title">📘 আজকের Vocabulary</h1>
+    <p class="page-sub">${fmtDate(S.date)} — ইংরেজি পত্রিকায় আসা গুরুত্বপূর্ণ ${bn(list.length)}টি শব্দ: বাংলা অর্থ, Synonym, Antonym ও পত্রিকার উদাহরণ। শব্দে ক্লিক করুন বাক্যে এর ভূমিকা (Noun/Gerund/Possessive…) জানতে।</p>
+    <div class="row-btns" style="margin:0 0 14px"><a class="btn gold" href="#/quiz?d=${S.date}&src=vocab">🧠 শব্দ কুইজ দিন</a><a class="btn ghost" href="#/sentence?d=${S.date}">📐 বাক্য বিশ্লেষণ</a></div>
+    ${list.length ? `<div class="wgrid">${list.map(wordCard).join('')}</div>` : '<div class="empty"><b>📘</b>এই তারিখের শব্দতালিকা এখনো তৈরি হয়নি।</div>'}
+    <div class="h-sec"><h2>⭐ আমার শব্দভান্ডার (${bn(mine.length)})</h2></div>
+    ${mine.length ? `<div class="wgrid">${mine.reverse().map(([w, d]) => wordCard({ w, ...d })).join('')}</div>` : '<p class="muted">যেকোনো রঙিন শব্দে ক্লিক করে “☆ শব্দভান্ডারে রাখুন” চাপলে এখানে জমা হবে।</p>'}
+  </div>`;
+}
+function vocabQuestions(seed) {
+  const r = rng(seed), ws = shuffle(dayWordList(), r), qs = [];
+  if (ws.length < 4) return qs;
+  for (const d of ws) {
+    const others = shuffle(ws.filter((x) => x.w !== d.w), r);
+    const kind = r();
+    if (kind < 0.5 || !d.syn?.length) {
+      const o = shuffle([d.bn, ...others.slice(0, 3).map((x) => x.bn)], r);
+      if (new Set(o).size === 4) qs.push({ q: `“${d.w}” শব্দের বাংলা অর্থ কোনটি?`, o, a: o.indexOf(d.bn), e: `${d.w} (${d.pos || ''}) = ${d.bn}${d.syn?.length ? ` • Synonym: ${d.syn.slice(0, 3).join(', ')}` : ''}`, tag: 'Vocabulary' });
+    } else if (kind < 0.8 || !d.ant?.length) {
+      const right = d.syn[0], o = shuffle([right, ...others.slice(0, 3).map((x) => x.w)], r);
+      if (new Set(o).size === 4) qs.push({ q: `“${d.w}” শব্দের Synonym (সমার্থক) কোনটি?`, o, a: o.indexOf(right), e: `${d.w} = ${d.bn}; Synonyms: ${d.syn.slice(0, 4).join(', ')}`, tag: 'Synonym' });
+    } else {
+      const right = d.ant[0], o = shuffle([right, ...others.slice(0, 3).map((x) => x.syn?.[0] || x.w)], r);
+      if (new Set(o).size === 4) qs.push({ q: `“${d.w}” শব্দের Antonym (বিপরীত) কোনটি?`, o, a: o.indexOf(right), e: `${d.w} = ${d.bn}; Antonyms: ${d.ant.slice(0, 3).join(', ')}`, tag: 'Antonym' });
+    }
+  }
+  return qs;
 }
 
 // ---------- quiz / exam ----------
@@ -454,6 +581,7 @@ function viewQuiz() {
           <label><input type="radio" name="src" value="mix" checked><span>🔀 মিশ্র</span></label>
           <label><input type="radio" name="src" value="news" ${avail ? '' : 'disabled'}><span>🗞️ আজকের খবর</span></label>
           <label><input type="radio" name="src" value="bank"><span>🏦 ব্যাংক ও সাধারণ জ্ঞান</span></label>
+          <label><input type="radio" name="src" value="vocab" ${vocabQuestions(S.date).length >= 5 ? '' : 'disabled'}><span>📘 Vocabulary</span></label>
         </div>
         <b>প্রশ্ন সংখ্যা</b>
         <div class="opt-group">${[10, 20, 30, 50].map((n, i) => `<label><input type="radio" name="n" value="${n}" ${i === 0 ? 'checked' : ''}><span>${bn(n)}টি</span></label>`).join('')}</div>
@@ -476,11 +604,11 @@ function bindQuiz() {
     e.preventDefault();
     const fd = new FormData(f), src = fd.get('src'), n = +fd.get('n');
     const seed = S.date + ':' + Date.now();
-    let qs = src === 'bank' ? bankQuestions(seed) : src === 'news' ? newsQuestions(S.items, n, seed) : [];
+    let qs = src === 'bank' ? bankQuestions(seed) : src === 'news' ? newsQuestions(S.items, n, seed) : src === 'vocab' ? vocabQuestions(seed) : [];
     if (src === 'mix') {
-      const nq = shuffle(newsQuestions(S.items, n, seed)), bq = bankQuestions(seed);
-      const half = Math.min(nq.length, Math.ceil(n * 0.6));
-      qs = shuffle([...nq.slice(0, half), ...bq.slice(0, n - half)]);
+      const nq = shuffle(newsQuestions(S.items, n, seed)), bq = bankQuestions(seed), vq = vocabQuestions(seed);
+      const half = Math.min(nq.length, Math.ceil(n * 0.5)), vv = Math.min(vq.length, Math.ceil(n * 0.2));
+      qs = shuffle([...nq.slice(0, half), ...vq.slice(0, vv), ...bq.slice(0, n - half - vv)]);
     }
     qs = qs.slice(0, n);
     if (!qs.length) return toast('প্রশ্ন পাওয়া যায়নি');
@@ -591,6 +719,9 @@ function route() {
   switch (parts[0]) {
     case 'c': html = viewCat(parts[1], params); break;
     case 'quiz': html = viewQuiz(); break;
+    case 'star': html = viewStar(); break;
+    case 'sentence': html = viewSentence(); break;
+    case 'vocab': html = viewVocab(); break;
     case 'written': html = viewWritten(); break;
     case 'summary': html = viewSummary(); break;
     case 'archive': html = viewArchive(); break;
@@ -600,7 +731,7 @@ function route() {
     default: html = viewHome();
   }
   app.innerHTML = html;
-  if (parts[0] === 'quiz') bindQuiz();
+  if (parts[0] === 'quiz') { bindQuiz(); const sv = params.get('src'); const el = sv && document.querySelector(`#qform input[name=src][value="${sv}"]`); if (el && !el.disabled) el.checked = true; }
   if (parts[0] === 'about') window.renderProfile($('#aboutProfile'));
   $('#footerProfile').style.display = parts[0] === 'about' ? 'none' : '';
   $('#copyNotes') && ($('#copyNotes').onclick = () => navigator.clipboard?.writeText($('#notes').innerText).then(() => toast('সব পয়েন্ট কপি হয়েছে')));

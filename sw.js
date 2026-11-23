@@ -1,6 +1,6 @@
 // App shell cached; news data always network-first so it stays fresh.
-const CACHE = 'tis-protidin-v1';
-const SHELL = ['./', 'index.html', 'css/style.css', 'js/app.js', 'js/bank.js', 'js/profile.js', 'assets/logo.svg', 'assets/profile.jpg', 'assets/tis-academy.jpg', 'assets/icon-192.png'];
+const CACHE = 'tis-protidin-v2';
+const SHELL = ['./', 'index.html', 'css/style.css', 'js/app.js', 'js/bank.js', 'js/profile.js', 'js/vocab-data.js', 'js/grammar.js', 'js/exam.js', 'assets/logo.svg', 'assets/profile.jpg', 'assets/tis-academy.jpg', 'assets/icon-192.png'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', (e) => {
