@@ -1,0 +1,71 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["data/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Create Capacitor Android project
+        run: |
+          mkdir apk && cd apk
+          npm init -y >/dev/null
+          npm i @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
+          mkdir www
+          cp -r ../index.html ../css ../js ../assets ../manifest.webmanifest www/
+          cat > capacitor.config.json <<JSON
+          {
+            "appId": "com.tisacademy.protidin",
+            "appName": "TIS প্রতিদিন+",
+            "webDir": "www",
+            "server": { "url": "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/", "cleartext": false },
+            "android": { "allowMixedContent": false }
+          }
+          JSON
+          npx cap add android
+          npx cap sync android
+
+      - name: App icon
+        run: |
+          cd apk/android/app/src/main/res
+          rm -rf mipmap-anydpi-v26
+          for d in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
+            dir=mipmap-${d%%:*}; size=${d##*:}
+            mkdir -p $dir
+            cp ../../../../../www/assets/icon-${size}.png $dir/ic_launcher.png
+            cp $dir/ic_launcher.png $dir/ic_launcher_round.png
+            cp $dir/ic_launcher.png $dir/ic_launcher_foreground.png
+          done
+
+      - name: Build APK
+        run: |
+          cd apk/android
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk ../../TIS-Protidin.apk
+
+      - name: "Publish to Releases (tag apk)"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete apk --yes --cleanup-tag || true
+          gh release create apk TIS-Protidin.apk \
+            --title "TIS প্রতিদিন+ Android APK" \
+            --notes "সর্বশেষ Android অ্যাপ। ডাউনলোড করে ইনস্টল করুন (প্রয়োজনে 'Unknown sources' অনুমতি দিন)। অ্যাপটি সবসময় লাইভ সাইটের সর্বশেষ খবর দেখায়।" \
+            --latest

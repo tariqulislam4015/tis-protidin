@@ -1,0 +1,40 @@
+{
+  "feeds": [
+    { "id": "prothomalo", "name": "প্রথম আলো", "url": "https://www.prothomalo.com/feed/", "cat": "auto-bd", "lang": "bn", "gn": "prothomalo.com" },
+    { "id": "prothomalo-en", "name": "Prothom Alo English", "url": "https://en.prothomalo.com/feed/", "cat": "auto-bd", "lang": "en", "gn": "en.prothomalo.com" },
+    { "id": "dailystar", "name": "The Daily Star", "url": "https://www.thedailystar.net/frontpage/rss.xml", "cat": "auto-bd", "lang": "en", "gn": "thedailystar.net" },
+    { "id": "dailystar-biz", "name": "The Daily Star (Business)", "url": "https://www.thedailystar.net/business/rss.xml", "cat": "business", "lang": "en", "gn": "thedailystar.net/business" },
+    { "id": "dailystar-opinion", "name": "The Daily Star (Opinion)", "url": "https://www.thedailystar.net/opinion/rss.xml", "cat": "editorial", "lang": "en", "gn": "thedailystar.net/opinion" },
+    { "id": "dailystar-world", "name": "The Daily Star (World)", "url": "https://www.thedailystar.net/news/world/rss.xml", "cat": "international", "lang": "en" },
+    { "id": "dailystar-sports", "name": "The Daily Star (Sports)", "url": "https://www.thedailystar.net/sports/rss.xml", "cat": "sports", "lang": "en" },
+    { "id": "bbcbangla", "name": "বিবিসি বাংলা", "url": "https://feeds.bbci.co.uk/bengali/rss.xml", "cat": "auto-intl", "lang": "bn", "gn": "bbc.com/bengali" },
+    { "id": "bbc-world", "name": "BBC News (World)", "url": "https://feeds.bbci.co.uk/news/world/rss.xml", "cat": "international", "lang": "en" },
+    { "id": "bbc-asia", "name": "BBC News (Asia)", "url": "https://feeds.bbci.co.uk/news/world/asia/rss.xml", "cat": "international", "lang": "en" },
+    { "id": "bbc-business", "name": "BBC News (Business)", "url": "https://feeds.bbci.co.uk/news/business/rss.xml", "cat": "business", "lang": "en" },
+    { "id": "bbc-tech", "name": "BBC News (Technology)", "url": "https://feeds.bbci.co.uk/news/technology/rss.xml", "cat": "tech", "lang": "en" },
+    { "id": "bbc-science", "name": "BBC News (Science)", "url": "https://feeds.bbci.co.uk/news/science_and_environment/rss.xml", "cat": "tech", "lang": "en" },
+    { "id": "aljazeera", "name": "Al Jazeera", "url": "https://www.aljazeera.com/xml/rss/all.xml", "cat": "international", "lang": "en" },
+    { "id": "un-news", "name": "UN News", "url": "https://news.un.org/feed/subscribe/en/news/all/rss.xml", "cat": "international", "lang": "en" },
+    { "id": "tbs", "name": "The Business Standard", "url": "https://www.tbsnews.net/rss.xml", "cat": "auto-bd", "lang": "en", "gn": "tbsnews.net" },
+    { "id": "dhakatribune", "name": "Dhaka Tribune", "url": "https://www.dhakatribune.com/feed", "cat": "auto-bd", "lang": "en", "gn": "dhakatribune.com" },
+    { "id": "bdnews24", "name": "bdnews24.com", "url": "https://bdnews24.com/?widgetName=rssfeed&widgetId=1150&getXmlFeed=true", "cat": "auto-bd", "lang": "en", "gn": "bdnews24.com" },
+    { "id": "jugantor", "name": "যুগান্তর", "gnOnly": true, "gn": "jugantor.com", "cat": "auto-bd", "lang": "bn" },
+    { "id": "kalerkantho", "name": "কালের কণ্ঠ", "gnOnly": true, "gn": "kalerkantho.com", "cat": "auto-bd", "lang": "bn" },
+    { "id": "samakal", "name": "সমকাল", "gnOnly": true, "gn": "samakal.com", "cat": "auto-bd", "lang": "bn" },
+    { "id": "ittefaq", "name": "ইত্তেফাক", "gnOnly": true, "gn": "ittefaq.com.bd", "cat": "auto-bd", "lang": "bn" },
+    { "id": "bonikbarta", "name": "বণিক বার্তা", "gnOnly": true, "gn": "bonikbarta.com", "cat": "business", "lang": "bn" },
+    { "id": "financialexpress", "name": "The Financial Express", "gnOnly": true, "gn": "thefinancialexpress.com.bd", "cat": "business", "lang": "en" },
+    { "id": "gn-bd", "name": "Google News বাংলাদেশ", "url": "https://news.google.com/rss?hl=bn&gl=BD&ceid=BD:bn", "cat": "auto-bd", "lang": "bn", "aggregator": true },
+    { "id": "gn-editorial", "name": "সম্পাদকীয় (বিভিন্ন পত্রিকা)", "url": "https://news.google.com/rss/search?q=%E0%A6%B8%E0%A6%AE%E0%A7%8D%E0%A6%AA%E0%A6%BE%E0%A6%A6%E0%A6%95%E0%A7%80%E0%A6%AF%E0%A6%BC+when:2d&hl=bn&gl=BD&ceid=BD:bn", "cat": "editorial", "lang": "bn", "aggregator": true },
+    { "id": "gn-bank", "name": "ব্যাংক ও অর্থনীতি (বিভিন্ন পত্রিকা)", "url": "https://news.google.com/rss/search?q=%22Bangladesh+Bank%22+OR+%E0%A6%AC%E0%A6%BE%E0%A6%82%E0%A6%B2%E0%A6%BE%E0%A6%A6%E0%A7%87%E0%A6%B6+%E0%A6%AC%E0%A7%8D%E0%A6%AF%E0%A6%BE%E0%A6%82%E0%A6%95+when:2d&hl=bn&gl=BD&ceid=BD:bn", "cat": "business", "lang": "bn", "aggregator": true },
+    { "id": "gn-world-bn", "name": "আন্তর্জাতিক (বিভিন্ন পত্রিকা)", "url": "https://news.google.com/rss/headlines/section/topic/WORLD?hl=bn&gl=BD&ceid=BD:bn", "cat": "international", "lang": "bn", "aggregator": true }
+  ],
+  "youtube": [
+    { "handle": "tis.academy24", "name": "TIS Academy" },
+    { "handle": "bbcnewsbangla", "name": "BBC News Bangla" },
+    { "handle": "somoynews360", "name": "Somoy TV" },
+    { "handle": "JamunaTelevision", "name": "Jamuna TV" },
+    { "handle": "ProthomAlo", "name": "Prothom Alo" },
+    { "handle": "DailyStarBangladesh", "name": "The Daily Star" }
+  ]
+}

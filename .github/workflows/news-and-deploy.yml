@@ -1,0 +1,50 @@
+name: News update + Live site deploy
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 */3 * * *"   # প্রতি ৩ ঘণ্টায় খবর হালনাগাদ
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: news-deploy
+  cancel-in-progress: false
+
+jobs:
+  update-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Collect news from all sources
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}   # ঐচ্ছিক: থাকলে AI সারাংশ ও MCQ তৈরি হবে
+        run: node scripts/fetch-news.mjs
+
+      - name: Save data to repository
+        run: |
+          git config user.name "tis-bot"
+          git config user.email "tis-bot@users.noreply.github.com"
+          git add data
+          if git diff --cached --quiet; then echo "No new news"; exit 0; fi
+          git commit -m "news: $(TZ=Asia/Dhaka date '+%Y-%m-%d %H:%M') update [skip ci]"
+          for i in 1 2 3; do git pull --rebase origin main && git push && break; sleep 5; done
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - id: deploy
+        uses: actions/deploy-pages@v4
