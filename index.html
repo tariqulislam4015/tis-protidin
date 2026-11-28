@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TIS প্রতিদিন+ | সাম্প্রতিক বিষয়াবলি, কুইজ ও পরীক্ষা</title>
+<meta name="description" content="TIS প্রতিদিন+ — প্রথম আলো, ডেইলি স্টার, বিবিসি সহ বিভিন্ন সংবাদমাধ্যম থেকে তারিখভিত্তিক সাম্প্রতিক খবর, সম্পাদকীয়, অর্থনীতি, আন্তর্জাতিক, কুইজ ও ব্যাংক পরীক্ষার লিখিত প্রস্তুতি।">
+<meta name="theme-color" content="#0f766e">
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta property="og:title" content="TIS প্রতিদিন+">
+<meta property="og:description" content="প্রতিদিনের সাম্প্রতিক বিষয়াবলি, কুইজ ও পরীক্ষা — এক জায়গায়">
+<meta property="og:image" content="assets/icon-512.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Poppins:wght@600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="progress-line" id="loadbar"></div>
+
+<header class="topbar">
+  <div class="wrap topbar-in">
+    <a href="#/" class="brand" aria-label="TIS প্রতিদিন+ হোম">
+      <img src="assets/logo.svg" alt="" class="brand-logo">
+      <span class="brand-text">
+        <b>TIS <span>প্রতিদিন</span><i>+</i></b>
+        <small>সাম্প্রতিক • কুইজ • লিখিত প্রস্তুতি</small>
+      </span>
+    </a>
+    <div class="datebox" title="তারিখ বাছাই করুন">
+      <button class="icon-btn" id="prevDay" aria-label="আগের দিন">‹</button>
+      <label class="date-pill">
+        <span id="dateLabel">…</span>
+        <input type="date" id="datePick" aria-label="তারিখ">
+      </label>
+      <button class="icon-btn" id="nextDay" aria-label="পরের দিন">›</button>
+    </div>
+    <div class="top-actions">
+      <button class="icon-btn" id="searchBtn" aria-label="খুঁজুন">⌕</button>
+      <button class="icon-btn" id="themeBtn" aria-label="থিম">◐</button>
+      <a class="apk-btn" id="apkBtn" href="#" download>
+        <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M17.6 9.48l1.84-3.18a.38.38 0 0 0-.66-.38l-1.86 3.22A11.4 11.4 0 0 0 12 8.2c-1.77 0-3.43.38-4.92.94L5.22 5.92a.38.38 0 0 0-.66.38L6.4 9.48A10.8 10.8 0 0 0 1 18h22a10.8 10.8 0 0 0-5.4-8.52zM7 15.25a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5zm10 0a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5z"/></svg>
+        <span>APK</span>
+      </a>
+    </div>
+  </div>
+  <div class="searchbar wrap" id="searchBar" hidden>
+    <input type="search" id="searchInput" placeholder="খবর খুঁজুন… (যেমন: বাজেট, রিজার্ভ, IMF)">
+  </div>
+  <nav class="tabs" id="tabs">
+    <div class="wrap tabs-in">
+      <a href="#/" data-r="home">🏠 হোম</a>
+      <a href="#/star" data-r="star" class="tab-star">⭐ ৭-তারকা</a>
+      <a href="#/c/national" data-r="national">🇧🇩 জাতীয়</a>
+      <a href="#/c/international" data-r="international">🌍 আন্তর্জাতিক</a>
+      <a href="#/c/business" data-r="business">💹 অর্থনীতি ও ব্যবসা</a>
+      <a href="#/c/editorial" data-r="editorial">✍️ সম্পাদকীয়</a>
+      <a href="#/c/tech" data-r="tech">🔬 বিজ্ঞান-প্রযুক্তি</a>
+      <a href="#/c/sports" data-r="sports">🏏 খেলা</a>
+      <a href="#/c/video" data-r="video">▶️ ভিডিও</a>
+      <a href="#/quiz" data-r="quiz">🧠 কুইজ ও পরীক্ষা</a>
+      <a href="#/written" data-r="written">🏦 লিখিত প্রস্তুতি</a>
+      <a href="#/sentence" data-r="sentence">📐 বাক্য বিশ্লেষণ</a>
+      <a href="#/vocab" data-r="vocab">📘 Vocabulary</a>
+      <a href="#/summary" data-r="summary">📋 সারসংক্ষেপ</a>
+      <a href="#/archive" data-r="archive">🗓️ আর্কাইভ</a>
+      <a href="#/saved" data-r="saved">🔖 সংরক্ষিত</a>
+      <a href="#/about" data-r="about">👤 ডেভেলপার</a>
+    </div>
+  </nav>
+</header>
+
+<main class="wrap" id="app" tabindex="-1"></main>
+
+<footer class="footer">
+  <div class="wrap" id="footerProfile"></div>
+  <div class="wrap foot-note">
+    <p>সংবাদ শিরোনাম ও সারাংশ মূল সংবাদমাধ্যমের সম্পত্তি; পুরো খবর পড়তে মূল লিংকে যান। তথ্য স্বয়ংক্রিয়ভাবে প্রতি ৩ ঘণ্টায় হালনাগাদ হয়।</p>
+    <p>© <span id="yr"></span> TIS প্রতিদিন+ • Teach Idea For Success</p>
+  </div>
+</footer>
+
+<div class="modal" id="modal" hidden>
+  <div class="modal-back" data-close></div>
+  <article class="modal-card" role="dialog" aria-modal="true">
+    <button class="modal-x" data-close aria-label="বন্ধ">✕</button>
+    <div id="modalBody"></div>
+  </article>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="js/bank.js"></script>
+<script src="js/vocab-data.js"></script>
+<script src="js/grammar.js"></script>
+<script src="js/exam.js"></script>
+<script src="js/profile.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
